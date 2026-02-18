@@ -370,7 +370,7 @@ function ParticipantInput({
           <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
             Halaman Awal
           </label>
-          <div className="w-full rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-center text-sm font-bold text-slate-500">
+          <div className="w-full rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5 text-center text-base font-bold text-slate-500">
             {fromPage}
           </div>
         </div>
@@ -383,21 +383,41 @@ function ParticipantInput({
           <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
             Halaman Akhir <span className="normal-case text-slate-300">(maks {maxPage})</span>
           </label>
-          <input
-            type="number"
-            min={fromPage + 1}
-            max={maxPage}
-            value={toPage}
-            onChange={(e) => {
-              const v = Number.parseInt(e.target.value) || fromPage + 1;
-              onToChange(v);
-            }}
-            onBlur={(e) => {
-              const v = Number.parseInt(e.target.value) || fromPage + 1;
-              onToChange(Math.min(Math.max(v, fromPage + 1), maxPage));
-            }}
-            className={`w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-center text-sm font-bold transition-all focus:outline-none focus:ring-2 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${focusRing}`}
-          />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onToChange(Math.max(toPage - 1, fromPage + 1))}
+              disabled={toPage <= fromPage + 1}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="Kurangi halaman"
+            >
+              <span className="text-xl font-bold">−</span>
+            </button>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={toPage}
+              onChange={(e) => {
+                const v = Number.parseInt(e.target.value) || fromPage + 1;
+                onToChange(v);
+              }}
+              onBlur={(e) => {
+                const v = Number.parseInt(e.target.value) || fromPage + 1;
+                onToChange(Math.min(Math.max(v, fromPage + 1), maxPage));
+              }}
+              className={`w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-center text-base font-bold transition-all focus:outline-none focus:ring-2 ${focusRing}`}
+            />
+            <button
+              type="button"
+              onClick={() => onToChange(Math.min(toPage + 1, maxPage))}
+              disabled={toPage >= maxPage}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="Tambah halaman"
+            >
+              <span className="text-xl font-bold">+</span>
+            </button>
+          </div>
         </div>
 
         <div className={`rounded-lg px-3 py-2 text-center ${totalBg}`}>
