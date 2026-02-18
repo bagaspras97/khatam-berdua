@@ -12,7 +12,7 @@ const jakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "Khatam Berdua — Khatam Al-Qur'an Bersama",
   description:
-    "Tantangan khatam Al-Qur'an berdua dengan durasi fleksibel. Baca bersama, saling menguatkan.",
+    "Tantangan khatam Al-Qur'an berdua. Baca bersama, saling menguatkan.",
 };
 
 export default function RootLayout({
