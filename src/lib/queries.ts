@@ -149,3 +149,18 @@ export async function getProgressByDate(
   if (error) throw new Error(`Failed to fetch progress: ${error.message}`);
   return data ?? [];
 }
+
+export async function deleteProgress(
+  challengeId: string,
+  participantNumber: 1 | 2,
+  date: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("daily_progress")
+    .delete()
+    .eq("challenge_id", challengeId)
+    .eq("participant_number", participantNumber)
+    .eq("date", date);
+
+  if (error) throw new Error(`Failed to delete progress: ${error.message}`);
+}

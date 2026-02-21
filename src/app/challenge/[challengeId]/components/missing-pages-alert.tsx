@@ -285,7 +285,7 @@ function DebtBlock({
         </span>
       </div>
       <p className="mb-2 text-[11px] text-slate-400">
-        Hutang ini bisa diselesaikan oleh siapapun — pilih siapa yang akan membacanya:
+        Hutang ini bisa diselesaikan oleh siapapun — pilih jika sudah membacanya:
       </p>
       <div className="grid grid-cols-2 gap-1.5">
         <button

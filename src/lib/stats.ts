@@ -9,7 +9,7 @@ import {
   getDayTargets,
 } from "./constants";
 import { getDayNumber, getDateRange, getTodayJakarta } from "./date-utils";
-import { detectMissingPages } from "./gap-utils";
+import { detectMissingPages, getPagesAlreadyRead } from "./gap-utils";
 
 /**
  * Compute challenge stats from challenge + progress data.
@@ -67,7 +67,66 @@ export function computeStats(
     const dayNumber = index + 1;
     const { targetP1, targetP2 } = getDayTargets(dayNumber, durationDays);
     const dayProgress = progressByDate.get(date) || [];
-    const missingPages = detectMissingPages(dayNumber, date, dayProgress, durationDays) ?? undefined;
+    
+    // Smart detection: Only show missing pages that aren't already read in previous days
+    const pagesReadBefore = getPagesAlreadyRead(challenge.progress, date);
+    const missingPagesRaw = detectMissingPages(dayNumber, date, dayProgress, durationDays);
+    
+    // Filter out missing pages that were already read before this day
+    let missingPages: typeof missingPagesRaw = missingPagesRaw;
+    if (missingPagesRaw && pagesReadBefore.size > 0) {
+      const filterMissingRanges = (ranges: Array<{ from: number; to: number }> | undefined) => {
+        if (!ranges) return null;
+        
+        const filteredRanges: Array<{ from: number; to: number }> = [];
+        for (const range of ranges) {
+          let currentStart: number | null = null;
+          
+          for (let page = range.from; page <= range.to; page++) {
+            if (pagesReadBefore.has(page)) {
+              // This page was already read before, end current range if any
+              if (currentStart !== null) {
+                filteredRanges.push({ from: currentStart, to: page - 1 });
+                currentStart = null;
+              }
+            } else {
+              // This page is truly missing, start or continue range
+              currentStart ??= page;
+            }
+          }
+          
+          // Close final range if any
+          if (currentStart !== null) {
+            filteredRanges.push({ from: currentStart, to: range.to });
+          }
+        }
+        
+        if (filteredRanges.length === 0) return null;
+        const total = filteredRanges.reduce((sum, r) => sum + r.to - r.from + 1, 0);
+        return { ranges: filteredRanges, total };
+      };
+      
+      const p1Filtered = filterMissingRanges(missingPagesRaw.participant1Missing?.ranges);
+      const p2Filtered = filterMissingRanges(missingPagesRaw.participant2Missing?.ranges);
+      
+      if (!p1Filtered && !p2Filtered) {
+        missingPages = undefined; // All missing pages were already covered
+      } else {
+        const allRanges = [...(p1Filtered?.ranges ?? []), ...(p2Filtered?.ranges ?? [])];
+        const totalMissing = (p1Filtered?.total ?? 0) + (p2Filtered?.total ?? 0);
+        
+        missingPages = {
+          dayNumber: missingPagesRaw.dayNumber,
+          date: missingPagesRaw.date,
+          expectedStart: missingPagesRaw.expectedStart,
+          expectedEnd: missingPagesRaw.expectedEnd,
+          participant1Missing: p1Filtered,
+          participant2Missing: p2Filtered,
+          missingRanges: allRanges,
+          totalMissing,
+        };
+      }
+    }
 
     return {
       date,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateSecretKey, upsertProgress, getProgressByDate } from "@/lib/queries";
+import { validateSecretKey, upsertProgress, getProgressByDate, deleteProgress } from "@/lib/queries";
 import { ApiResponse, DailyProgress } from "@/lib/types";
 import { detectOverlappingPages, formatMissingRanges } from "@/lib/gap-utils";
 
@@ -115,6 +115,62 @@ export async function POST(
     console.error("Update progress error:", error);
     return NextResponse.json<ApiResponse>(
       { success: false, error: "Gagal menyimpan progress" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ challengeId: string }> }
+) {
+  try {
+    const { challengeId } = await params;
+    const body = await request.json();
+
+    const { secret_key, participant_number, date } = body;
+
+    // Validation
+    if (!secret_key) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: "Secret key diperlukan" },
+        { status: 401 }
+      );
+    }
+
+    if (!participant_number || ![1, 2].includes(participant_number)) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: "Participant number harus 1 atau 2" },
+        { status: 400 }
+      );
+    }
+
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: "Format tanggal tidak valid" },
+        { status: 400 }
+      );
+    }
+
+    // Auth check
+    const isValid = await validateSecretKey(challengeId, secret_key);
+    if (!isValid) {
+      return NextResponse.json<ApiResponse>(
+        { success: false, error: "Secret key salah" },
+        { status: 403 }
+      );
+    }
+
+    await deleteProgress(challengeId, participant_number, date);
+
+    return NextResponse.json<ApiResponse>(
+      { success: true },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Delete progress error:", error);
+    return NextResponse.json<ApiResponse>(
+      { success: false, error: "Gagal menghapus progress" },
       { status: 500 }
     );
   }

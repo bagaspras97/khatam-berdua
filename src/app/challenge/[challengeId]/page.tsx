@@ -193,6 +193,9 @@ export default function ChallengeDashboard() {
                 className="h-full rounded-full bg-white shadow-sm"
               />
             </div>
+            <div className="mt-1.5 text-right text-xs text-emerald-100/80">
+              {Math.floor((stats.totalPagesRead * 30) / TOTAL_PAGES)} dari 30 juz
+            </div>
           </div>
 
           {/* Status */}

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { DaySummary } from "@/lib/types";
 import { getDayTargets } from "@/lib/constants";
-import { getDayNumber } from "@/lib/date-utils";
+import { getDayNumber, formatDateId, formatDateShort } from "@/lib/date-utils";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   PenLine,
@@ -14,6 +14,8 @@ import {
   ArrowRight,
   Info,
   X,
+  Trash2,
+  Calendar,
 } from "lucide-react";
 
 interface ProgressCardProps {
@@ -46,9 +48,16 @@ export default function ProgressCard({
   const [p2From, setP2From] = useState(12);
   const [p2To, setP2To] = useState(21);
   const [saving, setSaving] = useState<1 | 2 | null>(null);
+  const [deleting, setDeleting] = useState<1 | 2 | null>(null);
   const [message, setMessage] = useState("");
   const [showInfo, setShowInfo] = useState(false);
   const [hasUserEdited, setHasUserEdited] = useState(false);
+  const [alreadyReadInfo, setAlreadyReadInfo] = useState<{
+    p1: { alreadyRead: boolean; day?: number; range?: string };
+    p2: { alreadyRead: boolean; day?: number; range?: string };
+  } | null>(null);
+  const [showBacaTambahanModal, setShowBacaTambahanModal] = useState<1 | 2 | null>(null);
+  const [selectedAdditionalDays, setSelectedAdditionalDays] = useState<number[]>([]);
   const infoRef = useRef<HTMLDivElement>(null);
   // Track which (date, currentProgress) combination we last initialized from,
   // so makeup saves on OTHER days don't re-trigger a reset of today's inputs.
@@ -56,6 +65,64 @@ export default function ProgressCard({
 
   const dayNum = getDayNumber(startDate, date);
   const { targetP1, targetP2, expectedStart, expectedEnd } = getDayTargets(dayNum, durationDays);
+
+  // Calculate tomorrow's target
+  const tomorrowDayNum = dayNum + 1;
+  const isTomorrowValid = tomorrowDayNum <= durationDays;
+  const tomorrowTargets = isTomorrowValid ? getDayTargets(tomorrowDayNum, durationDays) : null;
+  
+  // Calculate tomorrow's date
+  const tomorrowDate = new Date(date + "T00:00:00Z");
+  tomorrowDate.setUTCDate(tomorrowDate.getUTCDate() + 1);
+  const tomorrowDateStr = tomorrowDate.toISOString().split("T")[0];
+
+  // Check if today's pages were already read in previous days
+  useEffect(() => {
+    const p1MinPage = expectedStart;
+    const p1MaxPage = expectedStart + targetP1 - 1;
+    const p2MinPage = expectedStart + targetP1;
+    const p2MaxPage = expectedEnd;
+
+    let p1AlreadyRead = false;
+    let p1Day: number | undefined;
+    let p1Range: string | undefined;
+    let p2AlreadyRead = false;
+    let p2Day: number | undefined;
+    let p2Range: string | undefined;
+
+    for (const day of dailySummaries) {
+      if (day.date >= date) continue; // Only check previous days
+
+      // Check P1's target pages
+      const p1RangeStr = day.participant1Range;
+      if (p1RangeStr && p1RangeStr !== "-") {
+        const [from, to] = p1RangeStr.split("-").map(Number);
+        if (from && to && from <= p1MinPage && to >= p1MaxPage) {
+          p1AlreadyRead = true;
+          p1Day = day.dayNumber;
+          p1Range = p1RangeStr;
+          break; // Found it
+        }
+      }
+
+      // Check P2's target pages
+      const p2RangeStr = day.participant2Range;
+      if (p2RangeStr && p2RangeStr !== "-") {
+        const [from, to] = p2RangeStr.split("-").map(Number);
+        if (from && to && from <= p2MinPage && to >= p2MaxPage) {
+          p2AlreadyRead = true;
+          p2Day = day.dayNumber;
+          p2Range = p2RangeStr;
+          break; // Found it
+        }
+      }
+    }
+
+    setAlreadyReadInfo({
+      p1: { alreadyRead: p1AlreadyRead, day: p1Day, range: p1Range },
+      p2: { alreadyRead: p2AlreadyRead, day: p2Day, range: p2Range },
+    });
+  }, [dailySummaries, date, expectedStart, expectedEnd, targetP1, targetP2]);
 
   useEffect(() => {
     // Build a key from the things that should actually trigger a re-init:
@@ -105,6 +172,47 @@ export default function ProgressCard({
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [showInfo]);
+
+  // Find next available days that haven't been read yet
+  const findAvailableDays = (participantNum: 1 | 2, limit: number = 3) => {
+    const availableDays: Array<{ day: number; from: number; to: number }> = [];
+    
+    for (let checkDay = dayNum + 1; checkDay <= durationDays && availableDays.length < limit; checkDay++) {
+      const { targetP1: dayP1, targetP2: dayP2, expectedStart: dayStart } = getDayTargets(checkDay, durationDays);
+      
+      let checkFrom: number;
+      let checkTo: number;
+      
+      if (participantNum === 1) {
+        checkFrom = dayStart;
+        checkTo = dayStart + dayP1 - 1;
+      } else {
+        checkFrom = dayStart + dayP1;
+        checkTo = dayStart + dayP1 + dayP2 - 1;
+      }
+      
+      // Check if this target range was already read in previous days
+      let alreadyRead = false;
+      for (const day of dailySummaries) {
+        if (day.date >= date) continue; // Only check previous days
+        
+        const rangeStr = participantNum === 1 ? day.participant1Range : day.participant2Range;
+        if (rangeStr && rangeStr !== "-") {
+          const [from, to] = rangeStr.split("-").map(Number);
+          if (from && to && from <= checkFrom && to >= checkTo) {
+            alreadyRead = true;
+            break;
+          }
+        }
+      }
+      
+      if (!alreadyRead) {
+        availableDays.push({ day: checkDay, from: checkFrom, to: checkTo });
+      }
+    }
+    
+    return availableDays;
+  };
 
   const saveProgress = async (
     participantNumber: 1 | 2,
@@ -176,6 +284,41 @@ export default function ProgressCard({
     }
   };
 
+  const deleteProgress = async (participantNumber: 1 | 2) => {
+    setDeleting(participantNumber);
+    setMessage("");
+
+    try {
+      const res = await fetch(`/api/challenges/${challengeId}/progress`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          secret_key: secretKey,
+          participant_number: participantNumber,
+          date,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        setMessage(`error:${data.error}`);
+        setTimeout(() => setMessage(""), 5000);
+        return;
+      }
+
+      setMessage("success:Data berhasil dihapus!");
+      setHasUserEdited(false);
+      onUpdate();
+      setTimeout(() => setMessage(""), 2000);
+    } catch {
+      setMessage("error:Gagal menghapus data");
+      setTimeout(() => setMessage(""), 5000);
+    } finally {
+      setDeleting(null);
+    }
+  };
+
   const p1MinPage = expectedStart;
   const p1MaxPage = expectedStart + targetP1 - 1;
   const p2MinPage = expectedStart + targetP1;
@@ -195,7 +338,7 @@ export default function ProgressCard({
         </div>
         <div className="flex-1">
           <h3 className="text-base font-bold text-slate-800">Input Progress Hari Ini</h3>
-          <p className="text-[11px] text-slate-400">{date} · Hari ke-{dayNum}</p>
+          <p className="text-[11px] text-slate-400">{formatDateId(date)} · Hari ke-{dayNum}</p>
         </div>
 
         <div className="relative" ref={infoRef}>
@@ -251,13 +394,61 @@ export default function ProgressCard({
                 </div>
 
                 <p className="mt-3 text-[10px] leading-relaxed text-slate-400">
-                  Halaman akhir yang dapat diinput dibatasi sesuai target hari ini.
+                  💡 Input progress bacaan untuk hari ini. Jika halaman hari ini sudah terbaca sebelumnya, gunakan fitur "Baca Tambahan" untuk mencatat bacaan tambahan.
                 </p>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Already read warning */}
+      {alreadyReadInfo && (alreadyReadInfo.p1.alreadyRead || alreadyReadInfo.p2.alreadyRead) && (
+        <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-blue-100">
+              <Info className="h-3.5 w-3.5 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-sm font-bold text-blue-800">Halaman Hari Ini Sudah Terbaca</h4>
+              <div className="mt-1.5 space-y-2 text-xs text-blue-700">
+                {alreadyReadInfo.p1.alreadyRead && (
+                  <div className="flex items-center justify-between">
+                    <p>
+                      <strong>{participant1Name}:</strong> Sudah dibaca di Hari {alreadyReadInfo.p1.day} (hal {alreadyReadInfo.p1.range})
+                    </p>
+                    <button
+                      onClick={() => {
+                        setShowBacaTambahanModal(1);
+                        setSelectedAdditionalDays([]);
+                      }}
+                      className="ml-3 rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-[11px] font-bold text-indigo-700 transition-all hover:border-indigo-400 hover:bg-indigo-50 active:scale-95"
+                    >
+                      📖 Baca Tambahan
+                    </button>
+                  </div>
+                )}
+                {alreadyReadInfo.p2.alreadyRead && (
+                  <div className="flex items-center justify-between">
+                    <p>
+                      <strong>{participant2Name}:</strong> Sudah dibaca di Hari {alreadyReadInfo.p2.day} (hal {alreadyReadInfo.p2.range})
+                    </p>
+                    <button
+                      onClick={() => {
+                        setShowBacaTambahanModal(2);
+                        setSelectedAdditionalDays([]);
+                      }}
+                      className="ml-3 rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-[11px] font-bold text-indigo-700 transition-all hover:border-indigo-400 hover:bg-indigo-50 active:scale-95"
+                    >
+                      📖 Baca Tambahan
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <ParticipantInput
@@ -269,9 +460,13 @@ export default function ProgressCard({
           onToChange={(v) => { setHasUserEdited(true); setP1To(Math.min(Math.max(v, p1From + 1), p1MaxPage)); }}
           totalPages={p1Pages}
           saving={saving === 1}
+          deleting={deleting === 1}
           onSave={() => saveProgress(1, p1From, p1To)}
+          onDelete={() => deleteProgress(1)}
           color="emerald"
           disabled={isBeforeStart}
+          alreadyRead={alreadyReadInfo?.p1.alreadyRead ?? false}
+          hasSavedProgress={!!(currentProgress?.participant1Range && currentProgress.participant1Range !== "-")}
         />
 
         <ParticipantInput
@@ -283,9 +478,13 @@ export default function ProgressCard({
           onToChange={(v) => { setHasUserEdited(true); setP2To(Math.min(Math.max(v, p2From + 1), p2MaxPage)); }}
           totalPages={p2Pages}
           saving={saving === 2}
+          deleting={deleting === 2}
           onSave={() => saveProgress(2, p2From, p2To)}
+          onDelete={() => deleteProgress(2)}
           color="rose"
           disabled={isBeforeStart}
+          alreadyRead={alreadyReadInfo?.p2.alreadyRead ?? false}
+          hasSavedProgress={!!(currentProgress?.participant2Range && currentProgress.participant2Range !== "-")}
         />
       </div>
 
@@ -301,17 +500,243 @@ export default function ProgressCard({
               className={`mt-4 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium ${
                 msgType === "success"
                   ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : msgType === "info"
+                  ? "border-blue-200 bg-blue-50 text-blue-700"
                   : "border-rose-200 bg-rose-50 text-rose-600"
               }`}
             >
               {msgType === "success" ? (
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
+              ) : msgType === "info" ? (
+                <Info className="h-4 w-4 shrink-0" />
               ) : (
                 <AlertCircle className="h-4 w-4 shrink-0" />
               )}
               {msgText}
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Tomorrow's Target - No Collapse */}
+      {isTomorrowValid ? (
+        <div className="glass-card mt-5 rounded-2xl p-5 shadow-sm sm:p-6">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-violet-500 to-purple-600 text-white shadow-md shadow-violet-200/40">
+              <Calendar className="h-4.5 w-4.5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-800">Target Esok Hari</h3>
+              <p className="text-[11px] text-slate-400">Persiapkan bacaan untuk besok</p>
+            </div>
+          </div>
+
+          {/* Tomorrow's target card */}
+          <div className="rounded-xl border border-violet-200 bg-linear-to-br from-violet-50 to-purple-50/30 p-4 shadow-sm">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-slate-700">
+                  Hari {tomorrowDayNum}
+                </span>
+                <span className="rounded-lg bg-violet-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm">
+                  Besok
+                </span>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] text-slate-400">Total</p>
+                <p className="text-sm font-bold text-slate-700">
+                  {tomorrowTargets!.targetP1 + tomorrowTargets!.targetP2} hal
+                </p>
+              </div>
+            </div>
+            <p className="mb-3 text-xs font-medium text-slate-500">
+              📅 {formatDateShort(tomorrowDateStr)}
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3">
+                <p className="mb-1 text-[10px] font-semibold text-emerald-600">
+                  {participant1Name}
+                </p>
+                <p className="text-sm font-bold text-emerald-800">
+                  {tomorrowTargets!.expectedStart}–{tomorrowTargets!.expectedStart + tomorrowTargets!.targetP1 - 1}
+                </p>
+                <p className="mt-1 text-[10px] text-emerald-500">{tomorrowTargets!.targetP1} halaman</p>
+              </div>
+              <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-3">
+                <p className="mb-1 text-[10px] font-semibold text-rose-600">
+                  {participant2Name}
+                </p>
+                <p className="text-sm font-bold text-rose-800">
+                  {tomorrowTargets!.expectedStart + tomorrowTargets!.targetP1}–{tomorrowTargets!.expectedEnd}
+                </p>
+                <p className="mt-1 text-[10px] text-rose-500">{tomorrowTargets!.targetP2} halaman</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="glass-card mt-5 rounded-2xl p-8 text-center shadow-sm">
+          <div className="mb-3 text-4xl">🎉</div>
+          <p className="text-base font-bold text-slate-700">Ini adalah hari terakhir!</p>
+          <p className="mt-1 text-sm text-slate-400">Tidak ada target untuk esok hari</p>
+        </div>
+      )}
+
+      {/* Baca Tambahan Modal */}
+      <AnimatePresence>
+        {showBacaTambahanModal && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowBacaTambahanModal(null)}
+              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+            />
+            
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            >
+              <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-800">
+                      📖 Baca Tambahan
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      {showBacaTambahanModal === 1 ? participant1Name : participant2Name}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowBacaTambahanModal(null)}
+                    className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="px-6 py-4">
+                  <p className="mb-4 text-sm text-slate-600">
+                    Pilih hari mana yang ingin kamu baca hari ini:
+                  </p>
+
+                  <div className="space-y-2">
+                    {findAvailableDays(showBacaTambahanModal, 3).map((availableDay) => {
+                      const isSelected = selectedAdditionalDays.includes(availableDay.day);
+                      
+                      return (
+                        <button
+                          key={availableDay.day}
+                          onClick={() => {
+                            setSelectedAdditionalDays(prev =>
+                              isSelected
+                                ? prev.filter(d => d !== availableDay.day)
+                                : [...prev, availableDay.day].sort((a, b) => a - b)
+                            );
+                          }}
+                          className={`w-full rounded-lg border-2 p-4 text-left transition-all ${
+                            isSelected
+                              ? "border-indigo-400 bg-indigo-50 shadow-md"
+                              : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            {/* Checkbox */}
+                            <div
+                              className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-all ${
+                                isSelected
+                                  ? "border-indigo-500 bg-indigo-500"
+                                  : "border-slate-300 bg-white"
+                              }`}
+                            >
+                              {isSelected && (
+                                <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+
+                            {/* Day Info */}
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-bold text-slate-800">
+                                  Hari {availableDay.day}
+                                </span>
+                                <span className="text-xs text-slate-500">
+                                  {availableDay.to - availableDay.from + 1} halaman
+                                </span>
+                              </div>
+                              <p className="mt-0.5 text-xs font-medium text-slate-600">
+                                Halaman {availableDay.from}–{availableDay.to}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+
+                    {findAvailableDays(showBacaTambahanModal, 3).length === 0 && (
+                      <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
+                        <p className="text-sm text-slate-500">
+                          Semua hari berikutnya sudah terbaca
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex gap-2 border-t border-slate-200 px-6 py-4">
+                  <button
+                    onClick={() => setShowBacaTambahanModal(null)}
+                    className="flex-1 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition-all hover:bg-slate-50 active:scale-95"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (selectedAdditionalDays.length === 0) return;
+                      
+                      const participantNum = showBacaTambahanModal;
+                      const availableDays = findAvailableDays(participantNum, 3);
+                      const selectedDaysData = availableDays.filter(d => selectedAdditionalDays.includes(d.day));
+                      
+                      if (selectedDaysData.length > 0) {
+                        const firstDay = selectedDaysData[0];
+                        const lastDay = selectedDaysData[selectedDaysData.length - 1];
+                        
+                        if (participantNum === 1) {
+                          setP1From(firstDay.from);
+                          setP1To(lastDay.to);
+                        } else {
+                          setP2From(firstDay.from);
+                          setP2To(lastDay.to);
+                        }
+                        
+                        setHasUserEdited(true);
+                        setMessage(`info:✨ Target diset untuk ${selectedDaysData.length} hari tambahan: ${selectedDaysData.map(d => `Hari ${d.day}`).join(", ")}`);
+                        setTimeout(() => setMessage(""), 8000);
+                      }
+                      
+                      setShowBacaTambahanModal(null);
+                      setSelectedAdditionalDays([]);
+                    }}
+                    disabled={selectedAdditionalDays.length === 0}
+                    className="flex-1 rounded-lg bg-linear-to-r from-indigo-500 to-purple-500 px-4 py-2.5 text-sm font-bold text-white shadow-md transition-all hover:shadow-lg active:scale-95 disabled:opacity-50"
+                  >
+                    Simpan ({selectedAdditionalDays.length} hari)
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>
@@ -328,9 +753,13 @@ function ParticipantInput({
   onToChange,
   totalPages,
   saving,
+  deleting,
   onSave,
+  onDelete,
   color,
   disabled = false,
+  alreadyRead = false,
+  hasSavedProgress = false,
 }: {
   readonly name: string;
   readonly fromPage: number;
@@ -340,9 +769,13 @@ function ParticipantInput({
   readonly onToChange: (v: number) => void;
   readonly totalPages: number;
   readonly saving: boolean;
+  readonly deleting: boolean;
   readonly onSave: () => void;
+  readonly onDelete: () => void;
   readonly color: "emerald" | "rose";
   readonly disabled?: boolean;
+  readonly alreadyRead?: boolean;
+  readonly hasSavedProgress?: boolean;
 }) {
   const isEmerald = color === "emerald";
   const dotColor = isEmerald ? "bg-emerald-500" : "bg-rose-400";
@@ -361,8 +794,8 @@ function ParticipantInput({
         <div className={`h-2.5 w-2.5 rounded-full ${dotColor}`} />
         <span className="text-sm font-bold text-slate-700">{name}</span>
       </div>
-      <p className={`mb-3 text-[11px] font-medium ${rangeLabelColor}`}>
-        Target: hal {minPage}–{maxPage}
+      <p className={`mb-2 text-[11px] font-medium ${rangeLabelColor}`}>
+        Target Hari Ini: hal {minPage}–{maxPage}
       </p>
 
       <div className="space-y-2.5">
@@ -387,7 +820,7 @@ function ParticipantInput({
             <button
               type="button"
               onClick={() => onToChange(Math.max(toPage - 1, fromPage + 1))}
-              disabled={toPage <= fromPage + 1}
+              disabled={toPage <= fromPage + 1 || alreadyRead}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label="Kurangi halaman"
             >
@@ -398,6 +831,7 @@ function ParticipantInput({
               inputMode="numeric"
               pattern="[0-9]*"
               value={toPage}
+              readOnly={alreadyRead}
               onChange={(e) => {
                 const v = Number.parseInt(e.target.value) || fromPage + 1;
                 onToChange(v);
@@ -406,12 +840,12 @@ function ParticipantInput({
                 const v = Number.parseInt(e.target.value) || fromPage + 1;
                 onToChange(Math.min(Math.max(v, fromPage + 1), maxPage));
               }}
-              className={`w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-center text-base font-bold transition-all focus:outline-none focus:ring-2 ${focusRing}`}
+              className={`w-full rounded-lg border border-slate-200 ${alreadyRead ? 'bg-slate-100' : 'bg-white'} px-3 py-2 text-center text-base font-bold transition-all focus:outline-none focus:ring-2 ${focusRing} ${alreadyRead ? 'cursor-not-allowed' : ''}`}
             />
             <button
               type="button"
               onClick={() => onToChange(Math.min(toPage + 1, maxPage))}
-              disabled={toPage >= maxPage}
+              disabled={toPage >= maxPage || alreadyRead}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label="Tambah halaman"
             >
@@ -428,9 +862,10 @@ function ParticipantInput({
         </div>
       </div>
 
+      {/* Save Button */}
       <button
         onClick={onSave}
-        disabled={saving || disabled}
+        disabled={saving || disabled || alreadyRead}
         className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r ${btnGradient} px-3 py-2.5 text-sm font-bold text-white shadow-md transition-all hover:shadow-lg active:scale-[0.98] disabled:opacity-60`}
       >
         {saving ? (
@@ -443,6 +878,11 @@ function ParticipantInput({
             <Save className="h-4 w-4" />
             Belum Dimulai
           </>
+        ) : alreadyRead ? (
+          <>
+            <Save className="h-4 w-4" />
+            Sudah Terbaca
+          </>
         ) : (
           <>
             <Save className="h-4 w-4" />
@@ -450,6 +890,27 @@ function ParticipantInput({
           </>
         )}
       </button>
+
+      {/* Reset Button - only show if progress is saved for today */}
+      {hasSavedProgress && !disabled && (
+        <button
+          onClick={onDelete}
+          disabled={deleting}
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-rose-300 bg-white px-3 py-2 text-sm font-bold text-rose-600 transition-all hover:bg-rose-50 hover:border-rose-400 active:scale-[0.98] disabled:opacity-60"
+        >
+          {deleting ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Menghapus...
+            </>
+          ) : (
+            <>
+              <Trash2 className="h-4 w-4" />
+              Reset Data Hari Ini
+            </>
+          )}
+        </button>
+      )}
     </div>
   );
 }

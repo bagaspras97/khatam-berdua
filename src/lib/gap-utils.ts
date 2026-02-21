@@ -92,6 +92,29 @@ export function formatMissingRanges(ranges: Array<{ from: number; to: number }>)
 }
 
 /**
+ * Get all pages that have been read in previous days (before the specified date)
+ * @param allProgress - All progress entries
+ * @param beforeDate - Only consider progress before this date (exclusive)
+ * @returns Set of page numbers that have been read
+ */
+export function getPagesAlreadyRead(
+  allProgress: DailyProgress[],
+  beforeDate: string
+): Set<number> {
+  const readPages = new Set<number>();
+  
+  for (const entry of allProgress) {
+    if (entry.date >= beforeDate) continue;
+    
+    for (let page = entry.from_page; page <= entry.to_page; page++) {
+      readPages.add(page);
+    }
+  }
+  
+  return readPages;
+}
+
+/**
  * Check if page range overlaps with existing progress entries
  * @param fromPage - Start page of new entry
  * @param toPage - End page of new entry

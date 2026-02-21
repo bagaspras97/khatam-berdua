@@ -97,7 +97,7 @@ export default function HomePage() {
               step: 4,
               icon: BarChart3,
               title: "Pantau Progress",
-              desc: "Lihat statistik bersama sampai khatam 604 halaman!",
+              desc: "Lihat statistik bersama sampai khatam 604 halaman (30 juz)!",
               color: "from-rose-400 to-rose-500",
             },
           ].map(({ step, icon: Icon, title, desc, color }) => (

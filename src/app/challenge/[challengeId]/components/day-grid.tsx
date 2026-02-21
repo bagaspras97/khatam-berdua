@@ -50,7 +50,6 @@ export default function DayGrid({
       <div className="grid grid-cols-5 gap-1.5 sm:grid-cols-6 md:grid-cols-10">
         {dailySummaries.map((day, i) => {
           const isToday = day.date === today;
-          const isPast = day.date < today;
           const isFuture = day.date > today;
           const { targetP1, targetP2 } = getDayTargets(day.dayNumber, durationDays);
           const p1Met = day.participant1Pages >= targetP1;
@@ -85,7 +84,7 @@ export default function DayGrid({
                 <div className="h-1 overflow-hidden rounded-full bg-slate-100">
                   <div
                     className={`h-full rounded-full transition-all ${
-                      p1Met ? "bg-emerald-500" : isPast && day.participant1Pages > 0 ? "bg-amber-400" : "bg-slate-200"
+                      p1Met ? "bg-emerald-500" : day.participant1Pages > 0 ? "bg-amber-400" : "bg-slate-200"
                     }`}
                     style={{
                       width: `${Math.min((day.participant1Pages / targetP1) * 100, 100)}%`,
@@ -95,7 +94,7 @@ export default function DayGrid({
                 <div className="h-1 overflow-hidden rounded-full bg-slate-100">
                   <div
                     className={`h-full rounded-full transition-all ${
-                      p2Met ? "bg-rose-400" : isPast && day.participant2Pages > 0 ? "bg-amber-400" : "bg-slate-200"
+                      p2Met ? "bg-rose-400" : day.participant2Pages > 0 ? "bg-amber-400" : "bg-slate-200"
                     }`}
                     style={{
                       width: `${Math.min((day.participant2Pages / targetP2) * 100, 100)}%`,
