@@ -15,7 +15,6 @@ import {
   Info,
   X,
   Trash2,
-  Calendar,
 } from "lucide-react";
 
 interface ProgressCardProps {
@@ -518,66 +517,44 @@ export default function ProgressCard({
         )}
       </AnimatePresence>
 
-      {/* Tomorrow's Target - No Collapse */}
+      {/* Tomorrow's Target - Simple & Clean */}
       {isTomorrowValid ? (
-        <div className="glass-card mt-5 rounded-2xl p-5 shadow-sm sm:p-6">
-          <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-violet-500 to-purple-600 text-white shadow-md shadow-violet-200/40">
-              <Calendar className="h-4.5 w-4.5" />
+        <div className="mt-5 rounded-xl border border-slate-200 bg-white/60 p-4 backdrop-blur-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-slate-700">Target Besok</span>
+              <span className="text-xs text-slate-400">· {formatDateShort(tomorrowDateStr)}</span>
             </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-800">Target Esok Hari</h3>
-              <p className="text-[11px] text-slate-400">Persiapkan bacaan untuk besok</p>
-            </div>
+            <span className="text-xs font-medium text-slate-500">
+              Hari {tomorrowDayNum} · {tomorrowTargets!.targetP1 + tomorrowTargets!.targetP2} hal
+            </span>
           </div>
 
-          {/* Tomorrow's target card */}
-          <div className="rounded-xl border border-violet-200 bg-linear-to-br from-violet-50 to-purple-50/30 p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-slate-700">
-                  Hari {tomorrowDayNum}
-                </span>
-                <span className="rounded-lg bg-violet-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm">
-                  Besok
-                </span>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] text-slate-400">Total</p>
-                <p className="text-sm font-bold text-slate-700">
-                  {tomorrowTargets!.targetP1 + tomorrowTargets!.targetP2} hal
-                </p>
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg bg-emerald-50/60 px-3 py-2.5">
+              <p className="mb-1 text-[10px] font-medium text-emerald-600">
+                {participant1Name}
+              </p>
+              <p className="text-sm font-bold text-emerald-800">
+                {tomorrowTargets!.expectedStart}–{tomorrowTargets!.expectedStart + tomorrowTargets!.targetP1 - 1}
+              </p>
+              <p className="mt-0.5 text-[10px] text-emerald-600/70">{tomorrowTargets!.targetP1} hal</p>
             </div>
-            <p className="mb-3 text-xs font-medium text-slate-500">
-              📅 {formatDateShort(tomorrowDateStr)}
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3">
-                <p className="mb-1 text-[10px] font-semibold text-emerald-600">
-                  {participant1Name}
-                </p>
-                <p className="text-sm font-bold text-emerald-800">
-                  {tomorrowTargets!.expectedStart}–{tomorrowTargets!.expectedStart + tomorrowTargets!.targetP1 - 1}
-                </p>
-                <p className="mt-1 text-[10px] text-emerald-500">{tomorrowTargets!.targetP1} halaman</p>
-              </div>
-              <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-3">
-                <p className="mb-1 text-[10px] font-semibold text-rose-600">
-                  {participant2Name}
-                </p>
-                <p className="text-sm font-bold text-rose-800">
-                  {tomorrowTargets!.expectedStart + tomorrowTargets!.targetP1}–{tomorrowTargets!.expectedEnd}
-                </p>
-                <p className="mt-1 text-[10px] text-rose-500">{tomorrowTargets!.targetP2} halaman</p>
-              </div>
+            <div className="rounded-lg bg-rose-50/60 px-3 py-2.5">
+              <p className="mb-1 text-[10px] font-medium text-rose-600">
+                {participant2Name}
+              </p>
+              <p className="text-sm font-bold text-rose-800">
+                {tomorrowTargets!.expectedStart + tomorrowTargets!.targetP1}–{tomorrowTargets!.expectedEnd}
+              </p>
+              <p className="mt-0.5 text-[10px] text-rose-600/70">{tomorrowTargets!.targetP2} hal</p>
             </div>
           </div>
         </div>
       ) : (
-        <div className="glass-card mt-5 rounded-2xl p-8 text-center shadow-sm">
-          <div className="mb-3 text-4xl">🎉</div>
-          <p className="text-base font-bold text-slate-700">Ini adalah hari terakhir!</p>
+        <div className="mt-5 rounded-xl border border-slate-200 bg-white/60 p-6 text-center backdrop-blur-sm">
+          <p className="text-3xl">🎉</p>
+          <p className="mt-2 text-sm font-semibold text-slate-700">Ini adalah hari terakhir!</p>
           <p className="mt-1 text-sm text-slate-400">Tidak ada target untuk esok hari</p>
         </div>
       )}
