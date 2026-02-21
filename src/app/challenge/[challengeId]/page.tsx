@@ -149,91 +149,90 @@ export default function ChallengeDashboard() {
         variants={fadeIn}
         initial="hidden"
         animate="visible"
-        className="relative overflow-hidden rounded-2xl bg-linear-to-br from-emerald-600 via-emerald-500 to-teal-500 p-6 text-white shadow-xl shadow-emerald-200/40"
+        className="relative overflow-hidden rounded-2xl bg-linear-to-br from-emerald-600 via-emerald-500 to-teal-500 p-5 text-white shadow-xl shadow-emerald-200/40 sm:p-6"
       >
         {/* Decorative */}
         <div className="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
         <div className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
 
         <div className="relative">
+          {/* Top: Names + Status */}
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <h2 className="truncate text-xl font-extrabold tracking-tight sm:text-2xl">
+              <h2 className="truncate text-lg font-extrabold tracking-tight sm:text-xl">
                 {challenge.participant_1_name} & {challenge.participant_2_name}
               </h2>
-              <p className="mt-1 flex items-center gap-1.5 text-sm text-emerald-100">
-                <Clock className="h-3.5 w-3.5" />
-                Mulai {formatDateId(challenge.start_date)}
-              </p>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-emerald-100/90">
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {formatDateId(challenge.start_date)}
+                </span>
+                <span className="opacity-40">·</span>
+                <span>Hari ke-{stats.currentDay} dari {challenge.duration_days}</span>
+                <span className="opacity-40">·</span>
+                <span>{stats.daysRemaining} hari tersisa</span>
+              </div>
             </div>
-            <div className="flex shrink-0 flex-col gap-1.5">
-              <span className="rounded-full bg-white/20 px-3 py-1.5 text-center text-xs font-bold backdrop-blur-sm">
-                Hari ke-{stats.currentDay}
-              </span>
-              <span className="rounded-full bg-amber-400/90 px-3 py-1 text-center text-[11px] font-bold text-amber-900">
-                {challenge.duration_days} Hari
-              </span>
-            </div>
-          </div>
 
-          {/* Overall progress bar */}
-          <div className="mt-5">
-            <div className="mb-2 flex items-baseline justify-between text-sm">
-              <span className="font-medium text-emerald-100">Progress Keseluruhan</span>
-              <span className="font-bold">
-                {stats.totalPagesRead}/{TOTAL_PAGES}
-                <span className="ml-1 text-emerald-200">({stats.percentComplete}%)</span>
-              </span>
-            </div>
-            <div className="relative h-3 overflow-hidden rounded-full bg-white/20">
-              {/* Expected progress indicator */}
-              <div
-                className="absolute top-0 h-full border-r-2 border-dashed border-white/60"
-                style={{ left: `${Math.min((stats.expectedPages / TOTAL_PAGES) * 100, 100)}%` }}
-              />
-              {/* Actual progress */}
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${stats.percentComplete}%` }}
-                transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
-                className={`h-full rounded-full shadow-sm ${
-                  stats.isOnTrack ? "bg-white" : "bg-amber-300"
-                }`}
-              />
-            </div>
-            <div className="mt-1.5 flex items-center justify-between text-xs text-emerald-100/80">
-              <span>
-                {Math.floor((stats.totalPagesRead * 30) / TOTAL_PAGES)} dari 30 juz
-              </span>
-              <span>
-                Target: {stats.expectedPages} hal
-                {stats.isOnTrack ? " ✓" : ` (${stats.expectedPages - stats.totalPagesRead} hal lagi)`}
-              </span>
-            </div>
-          </div>
-
-          {/* Status */}
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
             {isKhatam ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/90 px-2.5 py-1 text-xs font-bold text-amber-900">
-                <Trophy className="h-3 w-3" />
-                Alhamdulillah, Khatam!
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-amber-400/90 px-3 py-1.5 text-xs font-bold text-amber-900 shadow-lg shadow-amber-500/20">
+                <Trophy className="h-3.5 w-3.5" />
+                Khatam!
               </span>
             ) : stats.isOnTrack ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-1 text-xs font-bold backdrop-blur-sm">
-                <CheckCircle2 className="h-3 w-3" />
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-xs font-bold backdrop-blur-sm">
+                <CheckCircle2 className="h-3.5 w-3.5" />
                 On Track
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/90 px-2.5 py-1 text-xs font-bold text-amber-900">
-                <Flame className="h-3 w-3" />
-                Kejar ketinggalan
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-amber-400/90 px-3 py-1.5 text-xs font-bold text-amber-900 shadow-lg shadow-amber-500/20">
+                <Flame className="h-3.5 w-3.5" />
+                Kejar Ketinggalan!
               </span>
             )}
-            <span className="text-xs text-emerald-200">
-              {stats.daysRemaining} hari tersisa
+          </div>
+
+          {/* Hero metric + juz */}
+          <div className="mt-5 mb-3 flex items-end justify-between">
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-extrabold leading-none sm:text-4xl">
+                {stats.percentComplete}%
+              </span>
+              <span className="text-sm text-emerald-100">
+                {stats.totalPagesRead}
+                <span className="text-emerald-200/60"> / {TOTAL_PAGES} hal</span>
+              </span>
+            </div>
+            <span className="rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold backdrop-blur-sm">
+              {Math.floor((stats.totalPagesRead * 30) / TOTAL_PAGES)}/30 juz
             </span>
           </div>
+
+          {/* Progress bar */}
+          <div className="relative h-3 overflow-hidden rounded-full bg-white/20">
+            {/* Expected progress marker */}
+            <div
+              className="absolute top-0 h-full border-r-2 border-dashed border-white/50"
+              style={{ left: `${Math.min((stats.expectedPages / TOTAL_PAGES) * 100, 100)}%` }}
+            />
+            {/* Actual progress */}
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${stats.percentComplete}%` }}
+              transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
+              className={`h-full rounded-full shadow-sm ${
+                stats.isOnTrack ? "bg-white" : "bg-amber-300"
+              }`}
+            />
+          </div>
+
+          {/* Target context */}
+          <p className="mt-2 text-[11px] text-emerald-100/70">
+            Target s/d hari ini: {stats.expectedPages} hal
+            {stats.isOnTrack
+              ? " — ✓ Sudah sesuai target"
+              : ` — kurang ${stats.expectedPages - stats.totalPagesRead} hal dari target`}
+          </p>
         </div>
       </motion.div>
 

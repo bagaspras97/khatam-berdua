@@ -352,6 +352,42 @@ export default function ProgressCard({
                 <p className="mt-3 text-[10px] leading-relaxed text-slate-400">
                   💡 Input progress bacaan untuk hari ini sesuai dengan target yang ditampilkan.
                 </p>
+
+                {/* Tomorrow's target */}
+                {isTomorrowValid && tomorrowTargets && (
+                  <>
+                    <div className="mt-3 border-t border-slate-100 pt-3">
+                      <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        📖 Besok · Hari {tomorrowDayNum} · {formatDateShort(tomorrowDateStr)}
+                      </p>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-2.5 py-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                            <span className="text-[10px] font-semibold text-emerald-800">{participant1Name}</span>
+                          </div>
+                          <span className="text-[11px] font-bold text-emerald-700">
+                            {tomorrowTargets.expectedStart}–{tomorrowTargets.expectedStart + tomorrowTargets.targetP1 - 1}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between rounded-lg bg-rose-50 px-2.5 py-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="h-1.5 w-1.5 rounded-full bg-rose-400" />
+                            <span className="text-[10px] font-semibold text-rose-800">{participant2Name}</span>
+                          </div>
+                          <span className="text-[11px] font-bold text-rose-600">
+                            {tomorrowTargets.expectedStart + tomorrowTargets.targetP1}–{tomorrowTargets.expectedEnd}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {!isTomorrowValid && (
+                  <p className="mt-3 border-t border-slate-100 pt-3 text-center text-[10px] font-medium text-slate-400">
+                    🎉 Ini hari terakhir!
+                  </p>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -451,48 +487,6 @@ export default function ProgressCard({
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Tomorrow's Target - Simple & Clean */}
-      {isTomorrowValid ? (
-        <div className="mt-5 rounded-xl border border-slate-200 bg-white/60 p-4 backdrop-blur-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-slate-700">Target Besok</span>
-              <span className="text-xs text-slate-400">· {formatDateShort(tomorrowDateStr)}</span>
-            </div>
-            <span className="text-xs font-medium text-slate-500">
-              Hari {tomorrowDayNum} · {tomorrowTargets!.targetP1 + tomorrowTargets!.targetP2} hal
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-lg bg-emerald-50/60 px-3 py-2.5">
-              <p className="mb-1 text-[10px] font-medium text-emerald-600">
-                {participant1Name}
-              </p>
-              <p className="text-sm font-bold text-emerald-800">
-                {tomorrowTargets!.expectedStart}–{tomorrowTargets!.expectedStart + tomorrowTargets!.targetP1 - 1}
-              </p>
-              <p className="mt-0.5 text-[10px] text-emerald-600/70">{tomorrowTargets!.targetP1} hal</p>
-            </div>
-            <div className="rounded-lg bg-rose-50/60 px-3 py-2.5">
-              <p className="mb-1 text-[10px] font-medium text-rose-600">
-                {participant2Name}
-              </p>
-              <p className="text-sm font-bold text-rose-800">
-                {tomorrowTargets!.expectedStart + tomorrowTargets!.targetP1}–{tomorrowTargets!.expectedEnd}
-              </p>
-              <p className="mt-0.5 text-[10px] text-rose-600/70">{tomorrowTargets!.targetP2} hal</p>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="mt-5 rounded-xl border border-slate-200 bg-white/60 p-6 text-center backdrop-blur-sm">
-          <p className="text-3xl">🎉</p>
-          <p className="mt-2 text-sm font-semibold text-slate-700">Ini adalah hari terakhir!</p>
-          <p className="mt-1 text-sm text-slate-400">Tidak ada target untuk esok hari</p>
-        </div>
-      )}
     </div>
   );
 }
