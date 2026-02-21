@@ -55,8 +55,6 @@ export default function ProgressCard({
     p1: { alreadyRead: boolean; day?: number; range?: string };
     p2: { alreadyRead: boolean; day?: number; range?: string };
   } | null>(null);
-  const [showBacaTambahanModal, setShowBacaTambahanModal] = useState<1 | 2 | null>(null);
-  const [selectedAdditionalDays, setSelectedAdditionalDays] = useState<number[]>([]);
   const infoRef = useRef<HTMLDivElement>(null);
   // Track which (date, currentProgress) combination we last initialized from,
   // so makeup saves on OTHER days don't re-trigger a reset of today's inputs.
@@ -171,47 +169,6 @@ export default function ProgressCard({
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [showInfo]);
-
-  // Find next available days that haven't been read yet
-  const findAvailableDays = (participantNum: 1 | 2, limit: number = 3) => {
-    const availableDays: Array<{ day: number; from: number; to: number }> = [];
-    
-    for (let checkDay = dayNum + 1; checkDay <= durationDays && availableDays.length < limit; checkDay++) {
-      const { targetP1: dayP1, targetP2: dayP2, expectedStart: dayStart } = getDayTargets(checkDay, durationDays);
-      
-      let checkFrom: number;
-      let checkTo: number;
-      
-      if (participantNum === 1) {
-        checkFrom = dayStart;
-        checkTo = dayStart + dayP1 - 1;
-      } else {
-        checkFrom = dayStart + dayP1;
-        checkTo = dayStart + dayP1 + dayP2 - 1;
-      }
-      
-      // Check if this target range was already read in previous days
-      let alreadyRead = false;
-      for (const day of dailySummaries) {
-        if (day.date >= date) continue; // Only check previous days
-        
-        const rangeStr = participantNum === 1 ? day.participant1Range : day.participant2Range;
-        if (rangeStr && rangeStr !== "-") {
-          const [from, to] = rangeStr.split("-").map(Number);
-          if (from && to && from <= checkFrom && to >= checkTo) {
-            alreadyRead = true;
-            break;
-          }
-        }
-      }
-      
-      if (!alreadyRead) {
-        availableDays.push({ day: checkDay, from: checkFrom, to: checkTo });
-      }
-    }
-    
-    return availableDays;
-  };
 
   const saveProgress = async (
     participantNumber: 1 | 2,
@@ -393,7 +350,7 @@ export default function ProgressCard({
                 </div>
 
                 <p className="mt-3 text-[10px] leading-relaxed text-slate-400">
-                  💡 Input progress bacaan untuk hari ini. Jika halaman hari ini sudah terbaca sebelumnya, gunakan fitur "Baca Tambahan" untuk mencatat bacaan tambahan.
+                  💡 Input progress bacaan untuk hari ini sesuai dengan target yang ditampilkan.
                 </p>
               </motion.div>
             )}
@@ -410,38 +367,16 @@ export default function ProgressCard({
             </div>
             <div className="flex-1">
               <h4 className="text-sm font-bold text-blue-800">Halaman Hari Ini Sudah Terbaca</h4>
-              <div className="mt-1.5 space-y-2 text-xs text-blue-700">
+              <div className="mt-1.5 space-y-1 text-xs text-blue-700">
                 {alreadyReadInfo.p1.alreadyRead && (
-                  <div className="flex items-center justify-between">
-                    <p>
-                      <strong>{participant1Name}:</strong> Sudah dibaca di Hari {alreadyReadInfo.p1.day} (hal {alreadyReadInfo.p1.range})
-                    </p>
-                    <button
-                      onClick={() => {
-                        setShowBacaTambahanModal(1);
-                        setSelectedAdditionalDays([]);
-                      }}
-                      className="ml-3 rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-[11px] font-bold text-indigo-700 transition-all hover:border-indigo-400 hover:bg-indigo-50 active:scale-95"
-                    >
-                      📖 Baca Tambahan
-                    </button>
-                  </div>
+                  <p>
+                    <strong>{participant1Name}:</strong> Sudah dibaca di Hari {alreadyReadInfo.p1.day} (hal {alreadyReadInfo.p1.range})
+                  </p>
                 )}
                 {alreadyReadInfo.p2.alreadyRead && (
-                  <div className="flex items-center justify-between">
-                    <p>
-                      <strong>{participant2Name}:</strong> Sudah dibaca di Hari {alreadyReadInfo.p2.day} (hal {alreadyReadInfo.p2.range})
-                    </p>
-                    <button
-                      onClick={() => {
-                        setShowBacaTambahanModal(2);
-                        setSelectedAdditionalDays([]);
-                      }}
-                      className="ml-3 rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-[11px] font-bold text-indigo-700 transition-all hover:border-indigo-400 hover:bg-indigo-50 active:scale-95"
-                    >
-                      📖 Baca Tambahan
-                    </button>
-                  </div>
+                  <p>
+                    <strong>{participant2Name}:</strong> Sudah dibaca di Hari {alreadyReadInfo.p2.day} (hal {alreadyReadInfo.p2.range})
+                  </p>
                 )}
               </div>
             </div>
@@ -558,164 +493,6 @@ export default function ProgressCard({
           <p className="mt-1 text-sm text-slate-400">Tidak ada target untuk esok hari</p>
         </div>
       )}
-
-      {/* Baca Tambahan Modal */}
-      <AnimatePresence>
-        {showBacaTambahanModal && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowBacaTambahanModal(null)}
-              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
-            />
-            
-            {/* Modal */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            >
-              <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
-                {/* Header */}
-                <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-800">
-                      📖 Baca Tambahan
-                    </h3>
-                    <p className="text-[11px] text-slate-500">
-                      {showBacaTambahanModal === 1 ? participant1Name : participant2Name}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setShowBacaTambahanModal(null)}
-                    className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-
-                {/* Content */}
-                <div className="px-6 py-4">
-                  <p className="mb-4 text-sm text-slate-600">
-                    Pilih hari mana yang ingin kamu baca hari ini:
-                  </p>
-
-                  <div className="space-y-2">
-                    {findAvailableDays(showBacaTambahanModal, 3).map((availableDay) => {
-                      const isSelected = selectedAdditionalDays.includes(availableDay.day);
-                      
-                      return (
-                        <button
-                          key={availableDay.day}
-                          onClick={() => {
-                            setSelectedAdditionalDays(prev =>
-                              isSelected
-                                ? prev.filter(d => d !== availableDay.day)
-                                : [...prev, availableDay.day].sort((a, b) => a - b)
-                            );
-                          }}
-                          className={`w-full rounded-lg border-2 p-4 text-left transition-all ${
-                            isSelected
-                              ? "border-indigo-400 bg-indigo-50 shadow-md"
-                              : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            {/* Checkbox */}
-                            <div
-                              className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-all ${
-                                isSelected
-                                  ? "border-indigo-500 bg-indigo-500"
-                                  : "border-slate-300 bg-white"
-                              }`}
-                            >
-                              {isSelected && (
-                                <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                </svg>
-                              )}
-                            </div>
-
-                            {/* Day Info */}
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-bold text-slate-800">
-                                  Hari {availableDay.day}
-                                </span>
-                                <span className="text-xs text-slate-500">
-                                  {availableDay.to - availableDay.from + 1} halaman
-                                </span>
-                              </div>
-                              <p className="mt-0.5 text-xs font-medium text-slate-600">
-                                Halaman {availableDay.from}–{availableDay.to}
-                              </p>
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-
-                    {findAvailableDays(showBacaTambahanModal, 3).length === 0 && (
-                      <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
-                        <p className="text-sm text-slate-500">
-                          Semua hari berikutnya sudah terbaca
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div className="flex gap-2 border-t border-slate-200 px-6 py-4">
-                  <button
-                    onClick={() => setShowBacaTambahanModal(null)}
-                    className="flex-1 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition-all hover:bg-slate-50 active:scale-95"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (selectedAdditionalDays.length === 0) return;
-                      
-                      const participantNum = showBacaTambahanModal;
-                      const availableDays = findAvailableDays(participantNum, 3);
-                      const selectedDaysData = availableDays.filter(d => selectedAdditionalDays.includes(d.day));
-                      
-                      if (selectedDaysData.length > 0) {
-                        const firstDay = selectedDaysData[0];
-                        const lastDay = selectedDaysData[selectedDaysData.length - 1];
-                        
-                        if (participantNum === 1) {
-                          setP1From(firstDay.from);
-                          setP1To(lastDay.to);
-                        } else {
-                          setP2From(firstDay.from);
-                          setP2To(lastDay.to);
-                        }
-                        
-                        setHasUserEdited(true);
-                        setMessage(`info:✨ Target diset untuk ${selectedDaysData.length} hari tambahan: ${selectedDaysData.map(d => `Hari ${d.day}`).join(", ")}`);
-                        setTimeout(() => setMessage(""), 8000);
-                      }
-                      
-                      setShowBacaTambahanModal(null);
-                      setSelectedAdditionalDays([]);
-                    }}
-                    disabled={selectedAdditionalDays.length === 0}
-                    className="flex-1 rounded-lg bg-linear-to-r from-indigo-500 to-purple-500 px-4 py-2.5 text-sm font-bold text-white shadow-md transition-all hover:shadow-lg active:scale-95 disabled:opacity-50"
-                  >
-                    Simpan ({selectedAdditionalDays.length} hari)
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
