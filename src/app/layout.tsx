@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import Link from "next/link";
+import Script from "next/script";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -10,9 +11,70 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Khatam Berdua — Khatam Al-Qur'an Bersama",
+  metadataBase: new URL("https://khatamberdua.site"),
+  title: {
+    default: "Khatam Berdua — Khatam Al-Qur'an Bersama",
+    template: "%s | Khatam Berdua",
+  },
   description:
-    "Tantangan khatam Al-Qur'an berdua. Baca bersama, saling menguatkan.",
+    "Platform khatam Al-Qur'an berdua secara online. Baca Al-Qur'an bersama pasangan, keluarga, atau teman. Tracking progress real-time, reminder harian, dan motivasi saling menguatkan sampai khatam 30 juz.",
+  keywords: [
+    "khatam quran",
+    "khatam berdua",
+    "baca quran bersama",
+    "khatam alquran online",
+    "tantangan khatam",
+    "challenge quran",
+    "khatam 30 hari",
+    "tadarus bersama",
+    "tracker quran",
+    "membaca alquran",
+  ],
+  authors: [{ name: "Khatam Berdua" }],
+  creator: "Khatam Berdua",
+  publisher: "Khatam Berdua",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  openGraph: {
+    type: "website",
+    locale: "id_ID",
+    url: "https://khatamberdua.site",
+    siteName: "Khatam Berdua",
+    title: "Khatam Berdua — Khatam Al-Qur'an Bersama",
+    description:
+      "Platform khatam Al-Qur'an berdua secara online. Baca Al-Qur'an bersama pasangan, keluarga, atau teman dengan tracking progress real-time.",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Khatam Berdua - Khatam Al-Qur'an Bersama",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Khatam Berdua — Khatam Al-Qur'an Bersama",
+    description:
+      "Platform khatam Al-Qur'an berdua secara online. Baca Al-Qur'an bersama dengan tracking progress real-time.",
+    images: ["/og-image.png"],
+    creator: "@khatamberdua",
+  },
+  alternates: {
+    canonical: "https://khatamberdua.site",
+  },
+  verification: {
+    google: "J-8KNDNTSj8jkPpMd_JHa5xQv861T5_0A6-Y2k1grig",
+  },
 };
 
 export default function RootLayout({
@@ -23,6 +85,29 @@ export default function RootLayout({
   return (
     <html lang="id">
       <body className={`${jakarta.variable} antialiased`}>
+        {/* Structured Data */}
+        <Script
+          id="structured-data"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebApplication",
+              name: "Khatam Berdua",
+              url: "https://khatamberdua.site",
+              description:
+                "Platform khatam Al-Qur'an berdua secara online. Baca Al-Qur'an bersama pasangan, keluarga, atau teman dengan tracking progress real-time.",
+              applicationCategory: "LifestyleApplication",
+              operatingSystem: "Web",
+              offers: {
+                "@type": "Offer",
+                price: "0",
+                priceCurrency: "IDR",
+              },
+              inLanguage: "id-ID",
+            }),
+          }}
+        />
         <div className="min-h-screen bg-linear-to-b from-emerald-50/80 via-white to-amber-50/30">
           {/* Decorative blobs */}
           <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
