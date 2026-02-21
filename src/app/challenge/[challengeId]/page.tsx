@@ -169,8 +169,6 @@ export default function ChallengeDashboard() {
                 </span>
                 <span className="opacity-40">·</span>
                 <span>Hari ke-{stats.currentDay} dari {challenge.duration_days}</span>
-                <span className="opacity-40">·</span>
-                <span>{stats.daysRemaining} hari tersisa</span>
               </div>
             </div>
 
