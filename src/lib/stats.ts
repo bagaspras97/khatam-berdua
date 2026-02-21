@@ -168,6 +168,7 @@ export function computeStats(
     currentDay: clampedCurrentDay,
     daysRemaining: Math.max(durationDays - clampedCurrentDay, 0),
     isOnTrack: totalPagesRead >= expectedPages,
+    expectedPages,
     dailySummaries,
   };
 }

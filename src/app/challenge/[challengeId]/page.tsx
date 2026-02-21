@@ -185,16 +185,30 @@ export default function ChallengeDashboard() {
                 <span className="ml-1 text-emerald-200">({stats.percentComplete}%)</span>
               </span>
             </div>
-            <div className="h-3 overflow-hidden rounded-full bg-white/20">
+            <div className="relative h-3 overflow-hidden rounded-full bg-white/20">
+              {/* Expected progress indicator */}
+              <div
+                className="absolute top-0 h-full border-r-2 border-dashed border-white/60"
+                style={{ left: `${Math.min((stats.expectedPages / TOTAL_PAGES) * 100, 100)}%` }}
+              />
+              {/* Actual progress */}
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${stats.percentComplete}%` }}
                 transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
-                className="h-full rounded-full bg-white shadow-sm"
+                className={`h-full rounded-full shadow-sm ${
+                  stats.isOnTrack ? "bg-white" : "bg-amber-300"
+                }`}
               />
             </div>
-            <div className="mt-1.5 text-right text-xs text-emerald-100/80">
-              {Math.floor((stats.totalPagesRead * 30) / TOTAL_PAGES)} dari 30 juz
+            <div className="mt-1.5 flex items-center justify-between text-xs text-emerald-100/80">
+              <span>
+                {Math.floor((stats.totalPagesRead * 30) / TOTAL_PAGES)} dari 30 juz
+              </span>
+              <span>
+                Target: {stats.expectedPages} hal
+                {stats.isOnTrack ? " ✓" : ` (${stats.expectedPages - stats.totalPagesRead} hal lagi)`}
+              </span>
             </div>
           </div>
 

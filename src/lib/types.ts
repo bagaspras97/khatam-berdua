@@ -93,6 +93,7 @@ export interface ChallengeStats {
   currentDay: number;
   daysRemaining: number;
   isOnTrack: boolean;
+  expectedPages: number;            // total pages expected to be read by currentDay
   dailySummaries: DaySummary[];
 }
 
