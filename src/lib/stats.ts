@@ -110,7 +110,7 @@ export function computeStats(
       const p2Filtered = filterMissingRanges(missingPagesRaw.participant2Missing?.ranges);
       
       if (!p1Filtered && !p2Filtered) {
-        missingPages = undefined; // All missing pages were already covered
+        missingPages = null; // All missing pages were already covered
       } else {
         const allRanges = [...(p1Filtered?.ranges ?? []), ...(p2Filtered?.ranges ?? [])];
         const totalMissing = (p1Filtered?.total ?? 0) + (p2Filtered?.total ?? 0);
@@ -139,7 +139,7 @@ export function computeStats(
       isComplete:
         p1Pages >= targetP1 &&
         p2Pages >= targetP2,
-      missingPages,
+      missingPages: missingPages || undefined,
     };
   });
 
