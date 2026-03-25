@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { sql } from "./db";
 import {
   Challenge,
   ChallengeWithProgress,
@@ -13,70 +13,37 @@ import {
 export async function createChallenge(
   data: CreateChallengeRequest
 ): Promise<Challenge> {
-  const { data: challenge, error } = await supabase
-    .from("challenges")
-    .insert({
-      participant_1_name: data.participant_1_name,
-      participant_2_name: data.participant_2_name,
-      start_date: data.start_date,
-      secret_key: data.secret_key,
-      duration_days: data.duration_days ?? 30,
-    })
-    .select()
-    .single();
-
-  if (error) throw new Error(`Failed to create challenge: ${error.message}`);
-  return challenge;
+  const rows = await sql`
+    INSERT INTO challenges (participant_1_name, participant_2_name, start_date, secret_key, duration_days)
+    VALUES (${data.participant_1_name}, ${data.participant_2_name}, ${data.start_date}, ${data.secret_key}, ${data.duration_days ?? 30})
+    RETURNING *
+  `;
+  if (!rows[0]) throw new Error("Failed to create challenge");
+  return rows[0] as Challenge;
 }
 
 export async function getChallengeById(
   challengeId: string
 ): Promise<Challenge | null> {
-  const { data, error } = await supabase
-    .from("challenges")
-    .select("*")
-    .eq("id", challengeId)
-    .single();
-
-  if (error) {
-    if (error.code === "PGRST116") return null; // Not found
-    throw new Error(`Failed to fetch challenge: ${error.message}`);
-  }
-
-  return data;
+  const rows = await sql`SELECT * FROM challenges WHERE id = ${challengeId}`;
+  return (rows[0] as Challenge) ?? null;
 }
 
 export async function getChallengeWithProgress(
   challengeId: string
 ): Promise<ChallengeWithProgress | null> {
-  const { data: challenge, error: challengeError } = await supabase
-    .from("challenges")
-    .select("*")
-    .eq("id", challengeId)
-    .single();
+  const challenges = await sql`SELECT * FROM challenges WHERE id = ${challengeId}`;
+  if (challenges.length === 0) return null;
 
-  if (challengeError) {
-    if (challengeError.code === "PGRST116") return null;
-    throw new Error(
-      `Failed to fetch challenge: ${challengeError.message}`
-    );
-  }
-
-  const { data: progress, error: progressError } = await supabase
-    .from("daily_progress")
-    .select("*")
-    .eq("challenge_id", challengeId)
-    .order("date", { ascending: true });
-
-  if (progressError) {
-    throw new Error(
-      `Failed to fetch progress: ${progressError.message}`
-    );
-  }
+  const progress = await sql`
+    SELECT * FROM daily_progress
+    WHERE challenge_id = ${challengeId}
+    ORDER BY date ASC
+  `;
 
   return {
-    ...challenge,
-    progress: progress ?? [],
+    ...(challenges[0] as Challenge),
+    progress: progress as DailyProgress[],
   };
 }
 
@@ -112,42 +79,32 @@ export async function upsertProgress({
   notes?: string;
   actualReaderNumber?: 1 | 2;
 }): Promise<DailyProgress> {
-  const { data, error } = await supabase
-    .from("daily_progress")
-    .upsert(
-      {
-        challenge_id: challengeId,
-        participant_number: participantNumber,
-        date,
-        from_page: fromPage,
-        to_page: toPage,
-        is_makeup: isMakeup,
-        notes: notes || null,
-        actual_reader_number: actualReaderNumber ?? participantNumber,
-      },
-      {
-        onConflict: "challenge_id,participant_number,date",
-      }
-    )
-    .select()
-    .single();
-
-  if (error) throw new Error(`Failed to update progress: ${error.message}`);
-  return data;
+  const rows = await sql`
+    INSERT INTO daily_progress (challenge_id, participant_number, date, from_page, to_page, is_makeup, notes, actual_reader_number)
+    VALUES (${challengeId}, ${participantNumber}, ${date}, ${fromPage}, ${toPage}, ${isMakeup}, ${notes ?? null}, ${actualReaderNumber ?? participantNumber})
+    ON CONFLICT (challenge_id, participant_number, date)
+    DO UPDATE SET
+      from_page = EXCLUDED.from_page,
+      to_page = EXCLUDED.to_page,
+      is_makeup = EXCLUDED.is_makeup,
+      notes = EXCLUDED.notes,
+      actual_reader_number = EXCLUDED.actual_reader_number,
+      updated_at = now()
+    RETURNING *
+  `;
+  if (!rows[0]) throw new Error("Failed to update progress");
+  return rows[0] as DailyProgress;
 }
 
 export async function getProgressByDate(
   challengeId: string,
   date: string
 ): Promise<DailyProgress[]> {
-  const { data, error } = await supabase
-    .from("daily_progress")
-    .select("*")
-    .eq("challenge_id", challengeId)
-    .eq("date", date);
-
-  if (error) throw new Error(`Failed to fetch progress: ${error.message}`);
-  return data ?? [];
+  const rows = await sql`
+    SELECT * FROM daily_progress
+    WHERE challenge_id = ${challengeId} AND date = ${date}
+  `;
+  return rows as DailyProgress[];
 }
 
 export async function deleteProgress(
@@ -155,12 +112,10 @@ export async function deleteProgress(
   participantNumber: 1 | 2,
   date: string
 ): Promise<void> {
-  const { error } = await supabase
-    .from("daily_progress")
-    .delete()
-    .eq("challenge_id", challengeId)
-    .eq("participant_number", participantNumber)
-    .eq("date", date);
-
-  if (error) throw new Error(`Failed to delete progress: ${error.message}`);
+  await sql`
+    DELETE FROM daily_progress
+    WHERE challenge_id = ${challengeId}
+      AND participant_number = ${participantNumber}
+      AND date = ${date}
+  `;
 }

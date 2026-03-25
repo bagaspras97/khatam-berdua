@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
-    "@supabase/supabase-js": "^2.96.0",
+    "@neondatabase/serverless": "^1.0.2",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.34.1",
     "lucide-react": "^0.574.0",
